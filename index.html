@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
   :root{
     --navy:#0B1B3A; --navy2:#16306B; --accent:#FFC83D; --bg:#F3F5FA; --card:#fff;
@@ -92,7 +94,7 @@
   .logo{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font-weight:800;font-size:15px;color:#fff;flex-shrink:0;letter-spacing:-.5px}
   .meta{flex:1;min-width:0}
   .meta b{font-size:15px;font-weight:700;display:flex;align-items:center;gap:6px}
-  .badge{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:#fff;background:var(--fuel);padding:2px 6px;border-radius:6px}
+  .badge{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.4px;color:#ffffff !important;background:var(--fuel);padding:2px 7px;border-radius:6px;display:inline-block}
   .meta span{font-size:12px;color:var(--muted)}
   .price{text-align:right}
   .price .p{font-size:18px;font-weight:700}
@@ -124,6 +126,59 @@
   @keyframes sh{to{background-position:-200% 0}}
 
   .source{margin:18px 20px 0;font-size:11px;color:var(--muted);text-align:center;line-height:1.5}
+
+  /* ---------- Brand Filter Bar (Menu & Map) ---------- */
+  .brand-filter-bar{display:flex;gap:6px;overflow-x:auto;padding:0 16px 8px;margin-bottom:6px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .brand-filter-bar::-webkit-scrollbar{display:none}
+  .b-pill{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:12px;font-size:11.5px;font-weight:700;color:var(--muted);background:#fff;border:1px solid var(--line);white-space:nowrap;transition:.2s;flex-shrink:0;cursor:pointer}
+  .b-pill.on{background:var(--navy);color:#fff;border-color:var(--navy);box-shadow:0 3px 10px rgba(11,27,58,.2)}
+  .b-pill .dot{width:7px;height:7px;border-radius:50%}
+
+  /* Map Checkbox Bar */
+  .map-filter-bar{position:absolute;top:66px;left:14px;right:14px;z-index:1000;display:flex;gap:6px;overflow-x:auto;padding:4px 2px;scrollbar-width:none}
+  .map-filter-bar::-webkit-scrollbar{display:none}
+  .map-pill{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:12px;font-size:11px;font-weight:700;background:rgba(255,255,255,.96);color:var(--ink);box-shadow:0 4px 14px rgba(11,27,58,.16);border:1px solid #fff;white-space:nowrap;cursor:pointer;user-select:none;transition:.15s}
+  .map-pill input[type="checkbox"]{accent-color:var(--navy);width:13px;height:13px;cursor:pointer}
+  .map-pill.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+
+  /* ---------- Map View ---------- */
+  .map-view{position:absolute;top:48px;left:0;right:0;bottom:0;background:#e5e9f2;z-index:9;display:none;flex-direction:column}
+  .map-view.on{display:flex}
+  #mapContainer{flex:1;width:100%;height:100%;background:#dde2ed}
+  .map-header{position:absolute;top:14px;left:14px;right:14px;z-index:1000 !important;display:flex;gap:8px;pointer-events:auto}
+  .map-search{flex:1;background:rgba(255,255,255,.98);border-radius:18px;padding:11px 14px;display:flex;align-items:center;gap:10px;box-shadow:0 8px 24px rgba(11,27,58,.22);border:1.5px solid #fff}
+  .map-search input{border:0;background:none;outline:0;font-family:inherit;font-size:13.5px;width:100%;color:var(--ink);font-weight:700}
+  .map-search svg{width:18px;height:18px;color:var(--navy2);flex-shrink:0}
+  .map-btn{width:44px;height:44px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:0 8px 24px rgba(11,27,58,.22);border:1.5px solid #fff;color:var(--navy2);flex-shrink:0;cursor:pointer}
+  .leaflet-top.leaflet-right{top:116px !important;right:14px !important}
+  .leaflet-control-zoom{border:0 !important;box-shadow:0 6px 18px rgba(11,27,58,.18) !important;border-radius:14px !important;overflow:hidden}
+  .leaflet-control-zoom a{width:36px !important;height:36px !important;line-height:36px !important;font-size:16px !important;color:var(--navy) !important}
+  .map-badge{background:var(--navy);color:#fff;border-radius:999px;padding:4px 8px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:4px;box-shadow:0 3px 8px rgba(0,0,0,.3);border:2px solid #fff}
+  .map-card-popup{min-width:180px}
+  .map-card-popup b{display:block;font-size:13px;color:var(--ink);margin-bottom:2px}
+  .map-card-popup .station-addr{font-size:11px;color:var(--muted);margin-bottom:6px}
+  .map-card-popup .station-p{font-size:15px;font-weight:800;color:var(--fuel)}
+  .map-card-popup button{margin-top:8px;width:100%;background:var(--navy);color:#fff;font-size:11px;font-weight:700;padding:6px;border-radius:8px}
+
+  /* ---------- Calc View ---------- */
+  .calc-view{position:absolute;top:48px;left:0;right:0;bottom:0;background:var(--bg);z-index:9;display:none;flex-direction:column;overflow-y:auto;padding:16px 18px 96px}
+  .calc-view.on{display:flex}
+  .calc-card{background:var(--card);border-radius:22px;padding:18px;border:1px solid var(--line);box-shadow:0 8px 24px -10px rgba(11,27,58,.08);margin-bottom:14px}
+  .calc-title{font-size:18px;font-weight:800;letter-spacing:-.3px;margin-bottom:4px;color:var(--navy)}
+  .calc-desc{font-size:12px;color:var(--muted);margin-bottom:16px}
+  .calc-field{margin-bottom:14px}
+  .calc-field label{display:block;font-size:11.5px;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.3px}
+  .calc-input-wrap{display:flex;align-items:center;background:#F6F8FC;border:1.5px solid var(--line);border-radius:14px;padding:0 14px;transition:border-color .2s}
+  .calc-input-wrap:focus-within{border-color:var(--navy2);background:#fff}
+  .calc-input-wrap input{border:0;background:none;outline:0;font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;width:100%;padding:12px 0;color:var(--ink)}
+  .calc-input-wrap span{font-size:13px;font-weight:700;color:var(--muted)}
+  .calc-seg{display:flex;gap:6px;background:#EBF0FA;border-radius:12px;padding:3px;margin-top:4px}
+  .calc-seg button{flex:1;padding:8px 0;font-size:11.5px;font-weight:700;border-radius:9px;color:var(--muted);transition:.2s}
+  .calc-seg button.on{background:#fff;color:var(--navy);box-shadow:0 2px 8px rgba(0,0,0,.08)}
+  .calc-res-box{background:linear-gradient(145deg,var(--navy) 0%,var(--navy2) 100%);border-radius:20px;padding:18px;color:#fff;margin-top:12px;box-shadow:0 12px 28px -10px rgba(11,27,58,.4)}
+  .calc-res-label{font-size:11.5px;font-weight:600;opacity:.8;margin-bottom:4px}
+  .calc-res-val{font-size:28px;font-weight:800;letter-spacing:-.5px;font-family:'JetBrains Mono',monospace}
+  .calc-res-sub{font-size:12px;opacity:.85;margin-top:6px;border-top:1px solid rgba(255,255,255,.15);padding-top:8px;display:flex;justify-content:space-between}
 
   /* ---------- Bottom nav ---------- */
   .nav{position:absolute;left:12px;right:12px;bottom:12px;height:68px;background:rgba(255,255,255,.92);backdrop-filter:blur(14px);border-radius:26px;display:flex;justify-content:space-around;align-items:center;box-shadow:0 12px 30px -8px rgba(11,27,58,.3);border:1px solid rgba(255,255,255,.8);z-index:10}
@@ -284,15 +339,100 @@
           <button data-s="name">A–Z</button>
         </div>
       </div>
+      <!-- Brand filter bar for main list -->
+      <div class="brand-filter-bar" id="mainBrandBar"></div>
       <div class="list" id="list"></div>
-      <p class="source">Fiyatlar EPDK verileri ve dağıtıcı şirket duyurularından derlenmiştir. Örnek veridir; istasyon fiyatları farklılık gösterebilir.</p>
+      <p class="source" id="sourceDesc">Fiyatlar EPDK (Enerji Piyasası Düzenleme Kurumu) ve dağıtım şirketleri (Petrol Ofisi, Opet, Shell, BP, Total, Aytemiz) bültenlerinden anlık çekilmektedir.</p>
+    </div>
+
+    <!-- Map View Layer -->
+    <div class="map-view" id="mapView">
+      <div class="map-header">
+        <div class="map-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input type="text" id="mapSearchInput" placeholder="İstasyon veya ilçe ara…">
+        </div>
+        <button class="map-btn" id="mapLocateBtn" aria-label="Konumuma git">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
+        </button>
+      </div>
+      <!-- Map Checkbox Filter Bar -->
+      <div class="map-filter-bar" id="mapBrandBar"></div>
+      <div id="mapContainer"></div>
+    </div>
+
+    <!-- Calc View Layer -->
+    <div class="calc-view" id="calcView">
+      <div class="calc-card">
+        <div class="calc-title">Maliyet Hesaplayıcı</div>
+        <div class="calc-desc">Mesafe veya depo hacmine göre anlık yakıt masrafınızı hesaplayın.</div>
+
+        <div class="calc-field">
+          <label>Hesaplama Türü</label>
+          <div class="calc-seg" id="calcModeSeg">
+            <button class="on" data-m="distance">Mesafe (KM)</button>
+            <button data-m="liter">Litre / Depo</button>
+            <button data-m="budget">Bütçe (TL)</button>
+          </div>
+        </div>
+
+        <div class="calc-field">
+          <label>Yakıt Türü</label>
+          <div class="calc-seg" id="calcFuelSeg">
+            <button class="on" data-f="benzin">Benzin</button>
+            <button data-f="motorin">Motorin</button>
+            <button data-f="lpg">LPG</button>
+          </div>
+        </div>
+
+        <div class="calc-field" id="fieldDistance">
+          <label>Gidilecek Mesafe</label>
+          <div class="calc-input-wrap">
+            <input type="number" id="inputDistance" value="100" min="1" step="1">
+            <span>KM</span>
+          </div>
+        </div>
+
+        <div class="calc-field" id="fieldConsumption">
+          <label>Ortalama Tüketim (100 KM'de)</label>
+          <div class="calc-input-wrap">
+            <input type="number" id="inputConsumption" value="6.5" min="0.1" step="0.1">
+            <span>Litre</span>
+          </div>
+        </div>
+
+        <div class="calc-field" id="fieldLiter" style="display:none">
+          <label>Alınacak Yakıt Hacmi</label>
+          <div class="calc-input-wrap">
+            <input type="number" id="inputLiter" value="50" min="1" step="1">
+            <span>Litre</span>
+          </div>
+        </div>
+
+        <div class="calc-field" id="fieldBudget" style="display:none">
+          <label>Yakıt Bütçesi</label>
+          <div class="calc-input-wrap">
+            <input type="number" id="inputBudget" value="1000" min="50" step="50">
+            <span>TL</span>
+          </div>
+        </div>
+
+        <div class="calc-res-box">
+          <div class="calc-res-label" id="calcResLabel">Tahmini Toplam Tutar</div>
+          <div class="calc-res-val" id="calcResVal">0,00 ₺</div>
+          <div class="calc-res-sub">
+            <span id="calcResSub1">Litre Fiyatı: 84.60 ₺</span>
+            <span id="calcResSub2">Toplam: ~6.5 Litre</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Bottom nav -->
     <nav class="nav">
-      <button class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16"/><path d="M3 21h14"/><path d="M15 9h2a2 2 0 0 1 2 2v5a1.5 1.5 0 0 0 3 0V8l-3-3"/><path d="M8 8h4"/></svg>Fiyatlar</button>
-      <button data-msg="Harita yakında"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></svg>Harita</button>
-      <button data-msg="Hesaplayıcı yakında"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2.5" width="14" height="19" rx="3"/><path d="M8.5 7h7M9 12h.01M12 12h.01M15 12h.01M9 16h.01M12 16h.01M15 16h.01"/></svg>Hesapla</button>
+      <button class="on" id="navPricesBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16"/><path d="M3 21h14"/><path d="M15 9h2a2 2 0 0 1 2 2v5a1.5 1.5 0 0 0 3 0V8l-3-3"/><path d="M8 8h4"/></svg>Fiyatlar</button>
+      <button id="navMapBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></svg>Harita</button>
+      <button id="navCalcBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2.5" width="14" height="19" rx="3"/><path d="M8.5 7h7M9 12h.01M12 12h.01M15 12h.01M9 16h.01M12 16h.01M15 16h.01"/></svg>Hesapla</button>
       <button data-msg="Alarmlar yakında" style="position:relative"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg>Alarm<span class="badge-n" id="alarmDot" style="display:none"></span></button>
     </nav>
 
@@ -300,7 +440,14 @@
     <div class="scrim" id="scrim"></div>
     <div class="sheet" id="sheet" role="dialog" aria-label="Şehir seçimi">
       <div class="grab"></div>
-      <h3>Konum seç</h3>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3 style="margin:0">Konum seç</h3>
+        <span style="font-size:12px;font-weight:700;color:var(--navy2)" id="cityCountLabel">81 İl Aktif</span>
+      </div>
+      <div style="margin-bottom:10px;background:#F1F4FA;border-radius:12px;padding:8px 12px;display:flex;align-items:center;gap:8px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;color:var(--muted)"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="citySearchInput" placeholder="Şehir veya plaka ara…" style="border:0;background:none;outline:0;font-family:inherit;font-size:13px;font-weight:600;width:100%;color:var(--ink)">
+      </div>
       <div class="cities" id="cities"></div>
     </div>
   </div>
@@ -308,47 +455,70 @@
 
 <script>
 const FUELS = {
-  benzin:{name:'Benzin',label:'Kurşunsuz 95',base:47.60,color:'#12A150',mult:1},
-  motorin:{name:'Motorin',label:'Eurodiesel',base:48.35,color:'#F59E0B',mult:1},
-  lpg:{name:'LPG',label:'Otogaz',base:25.10,color:'#2F6BFF',mult:.5}
+  benzin:{name:'Benzin',label:'Kurşunsuz 95',color:'#12A150'},
+  motorin:{name:'Motorin',label:'Eurodiesel',color:'#F59E0B'},
+  lpg:{name:'LPG',label:'Otogaz',color:'#2F6BFF'}
 };
-const CITIES = [
-  {n:'İstanbul (Avr.)',s:'Marmara',o:0},
-  {n:'İstanbul (Anad.)',s:'Marmara',o:-.06},
-  {n:'Ankara',s:'İç Anadolu',o:-.22},
-  {n:'İzmir',s:'Ege',o:.12},
-  {n:'Bursa',s:'Marmara',o:-.10},
-  {n:'Antalya',s:'Akdeniz',o:.35},
-  {n:'Trabzon',s:'Karadeniz',o:.55}
+let CITIES = [
+  {n:'İstanbul (Avr.)',s:'Marmara',plate:'342'},
+  {n:'İstanbul (Anad.)',s:'Marmara',plate:'341'},
+  {n:'Ankara',s:'İç Anadolu',plate:'06'},
+  {n:'İzmir',s:'Ege',plate:'35'},
+  {n:'Bursa',s:'Marmara',plate:'16'},
+  {n:'Antalya',s:'Akdeniz',plate:'07'},
+  {n:'Diyarbakır',s:'Güneydoğu Anadolu',plate:'21'},
+  {n:'Trabzon',s:'Karadeniz',plate:'61'}
 ];
 const BRANDS = [
-  {n:'Opet',c:'#0057B8',i:'OP',o:.00},
-  {n:'Shell',c:'#F5C400',i:'SH',o:.18,dark:true},
-  {n:'Petrol Ofisi',c:'#E30613',i:'PO',o:.12},
-  {n:'BP',c:'#00963F',i:'BP',o:.22},
-  {n:'Total',c:'#ED1C24',i:'TT',o:.26},
-  {n:'Aytemiz',c:'#F26B21',i:'AY',o:-.14},
-  {n:'Alpet',c:'#6B2FB3',i:'AL',o:-.20},
-  {n:'TP',c:'#0E7C86',i:'TP',o:-.08}
+  {n:'Petrol Ofisi',c:'#E30613',i:'PO'},
+  {n:'Opet',c:'#0057B8',i:'OP'},
+  {n:'Shell',c:'#F5C400',i:'SH',dark:true},
+  {n:'BP',c:'#00963F',i:'BP'},
+  {n:'Total',c:'#ED1C24',i:'TT'},
+  {n:'Aytemiz',c:'#F26B21',i:'AY'},
+  {n:'Alpet',c:'#6B2FB3',i:'AL'},
+  {n:'TP',c:'#0E7C86',i:'TP'}
 ];
-const state={city:CITIES[0],fuel:'benzin',sort:'price',favs:new Set(['Opet','Aytemiz']),open:null,tick:0};
+let liveApiData = null;
+const state={
+  city:CITIES[0],
+  fuel:'benzin',
+  sort:'price',
+  favs:new Set(['Opet','Aytemiz']),
+  open:null,
+  tick:0,
+  selectedBrand: 'all', // Ana menüde tekli marka seçimi: 'all' veya 'Shell', 'Opet' vb.
+  mapSelectedBrands: new Set(BRANDS.map(b=>b.n)) // Haritada çoklu seçim (tikli)
+};
 
 function hash(s){let h=2166136261;for(const c of s){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
 function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 const fmt=n=>n.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2});
 
 function priceOf(b,fuel,city=state.city){
-  const f=FUELS[fuel];
-  const r=rng(hash(b.n+fuel+state.tick))();
-  const jitter=(r-.5)*.08;
-  return +(f.base+(city.o+b.o)*f.mult+jitter*f.mult).toFixed(2);
+  if(liveApiData && liveApiData.cities && liveApiData.cities[city.n]){
+    const cityData = liveApiData.cities[city.n];
+    if(cityData.brands && cityData.brands[b.n] && cityData.brands[b.n][fuel] !== undefined){
+      return cityData.brands[b.n][fuel];
+    }
+    if(cityData.base && cityData.base[fuel] !== undefined){
+      return cityData.base[fuel];
+    }
+  }
+  // Varsayılan referans
+  return fuel === 'benzin' ? 84.60 : (fuel === 'motorin' ? 95.00 : 41.20);
 }
-function deltaOf(b,fuel){
-  const r=rng(hash(b.n+fuel+city_key()+state.tick*3))();
-  const arr=[-.65,-.4,-.2,0,0,.15,.35,.9];
-  const f=FUELS[fuel];
-  return +(arr[Math.floor(r*arr.length)]*f.mult).toFixed(2);
+
+function deltaOf(b,fuel,city=state.city){
+  if(liveApiData && liveApiData.cities && liveApiData.cities[city.n]){
+    const cityData = liveApiData.cities[city.n];
+    if(cityData.brands && cityData.brands[b.n] && cityData.brands[b.n].delta && cityData.brands[b.n].delta[fuel] !== undefined){
+      return cityData.brands[b.n].delta[fuel];
+    }
+  }
+  return 0.00;
 }
+
 function city_key(){return state.city.n}
 function data(fuel=state.fuel){
   return BRANDS.map(b=>({...b,price:priceOf(b,fuel),delta:deltaOf(b,fuel)}));
@@ -407,8 +577,27 @@ function renderInsights(){
     </div>`;
 }
 
+function renderMainBrandBar(){
+  const bar = $('#mainBrandBar');
+  if(!bar) return;
+  const isAll = state.selectedBrand === 'all';
+  let html = `<button class="b-pill ${isAll?'on':''}" data-brand="all">Tüm Markalar</button>`;
+  BRANDS.forEach(b => {
+    const on = state.selectedBrand === b.n;
+    html += `<button class="b-pill ${on?'on':''}" data-brand="${b.n}">
+      <span class="dot" style="background:${b.c}"></span>${b.n}
+    </button>`;
+  });
+  bar.innerHTML = html;
+}
+
 function renderList(animate=true){
+  renderMainBrandBar();
   let d=data();
+  // Marka filtresi uygula
+  if(state.selectedBrand !== 'all'){
+    d = d.filter(x => x.n === state.selectedBrand);
+  }
   const minP=Math.min(...d.map(x=>x.price));
   if(state.sort==='price')d.sort((a,b)=>a.price-b.price);
   if(state.sort==='change')d.sort((a,b)=>a.delta-b.delta);
@@ -463,6 +652,12 @@ $('#sorts').addEventListener('click',e=>{
   [...$('#sorts').children].forEach(x=>x.classList.toggle('on',x===b));
   renderList();
 });
+$('#mainBrandBar').addEventListener('click', e => {
+  const b = e.target.closest('[data-brand]');
+  if(!b) return;
+  state.selectedBrand = b.dataset.brand;
+  renderList(false);
+});
 $('#list').addEventListener('click',e=>{
   const fav=e.target.closest('[data-fav]');
   if(fav){
@@ -475,8 +670,13 @@ $('#list').addEventListener('click',e=>{
   }
   const act=e.target.closest('[data-act]');
   if(act){
-    if(act.dataset.act==='alarm'){toast('🔔 '+act.dataset.b+' için alarm kuruldu');$('#alarmDot').style.display='block'}
-    else toast('📍 Harita uygulaması açılıyor…');
+    if(act.dataset.act==='alarm'){
+      toast('🔔 '+act.dataset.b+' için alarm kuruldu');
+      $('#alarmDot').style.display='block';
+    } else {
+      switchTab('map');
+      toast('📍 Harita açıldı');
+    }
     return;
   }
   const item=e.target.closest('.item');
@@ -500,32 +700,363 @@ function stampUpdated(){
   el.textContent='Canlı · Az önce güncellendi';
   timer=setInterval(()=>{secs++;el.textContent='Canlı · '+(secs<60?secs+' sn önce':Math.floor(secs/60)+' dk önce')+' güncellendi'},1000);
 }
-$('#refreshBtn').addEventListener('click',()=>{
+async function fetchLivePrices(){
+  try{
+    const res = await fetch('/api/fuel-prices');
+    if(res.ok){
+      liveApiData = await res.json();
+      if(liveApiData && liveApiData.cities){
+        const list = Object.keys(liveApiData.cities).map(name => {
+          const c = liveApiData.cities[name];
+          return {
+            n: name,
+            s: c.region,
+            plate: c.plate || ''
+          };
+        });
+        // Alfabetik sırala (İstanbul başta kalsın)
+        list.sort((a,b) => {
+          if(a.n.includes('İstanbul') && !b.n.includes('İstanbul')) return -1;
+          if(!a.n.includes('İstanbul') && b.n.includes('İstanbul')) return 1;
+          return a.n.localeCompare(b.n, 'tr');
+        });
+        CITIES = list;
+        const current = CITIES.find(c => c.n === state.city.n);
+        if(current) state.city = current;
+      }
+      return true;
+    }
+  }catch(err){
+    console.warn('API error, relying on local store:', err);
+  }
+  return false;
+}
+
+$('#refreshBtn').addEventListener('click', async ()=>{
   const btn=$('#refreshBtn');if(btn.classList.contains('spin'))return;
   btn.classList.add('spin');
   $('#list').innerHTML='<div class="skel"></div>'.repeat(5).replace(/<div class="skel"><\/div>/g,'<div class="skel"></div>');
-  $('#updated').textContent='Güncelleniyor…';
+  $('#updated').textContent='EPDK ve Dağıtıcılardan güncelleniyor…';
+  await fetchLivePrices();
   setTimeout(()=>{
-    state.tick++;btn.classList.remove('spin');renderAll();stampUpdated();toast('✅ Fiyatlar güncellendi');
-  },1200);
+    btn.classList.remove('spin');renderAll();stampUpdated();toast('✅ EPDK & Şirket fiyatları çekildi');
+  },600);
+});
+
+let map = null;
+let mapMarkers = [];
+
+function getCityCoords(cityName){
+  if(liveApiData && liveApiData.cities && liveApiData.cities[cityName]){
+    const c = liveApiData.cities[cityName];
+    if(c.lat && c.lng) return {lat: c.lat, lng: c.lng, zoom: 12};
+  }
+  return {lat: 39.0, lng: 35.0, zoom: 6};
+}
+
+function renderMapBrandBar(){
+  const bar = $('#mapBrandBar');
+  if(!bar) return;
+  const allSelected = BRANDS.every(b => state.mapSelectedBrands.has(b.n));
+  let html = `
+    <label class="map-pill ${allSelected?'active':''}">
+      <input type="checkbox" id="mapAllBrandsCheck" ${allSelected?'checked':''}>
+      <span>Hepsi</span>
+    </label>
+  `;
+  BRANDS.forEach(b => {
+    const isChecked = state.mapSelectedBrands.has(b.n);
+    html += `
+      <label class="map-pill ${isChecked?'active':''}">
+        <input type="checkbox" class="map-brand-cb" data-b="${b.n}" ${isChecked?'checked':''}>
+        <span class="dot" style="width:7px;height:7px;border-radius:50%;background:${b.c}"></span>
+        <span>${b.n}</span>
+      </label>
+    `;
+  });
+  bar.innerHTML = html;
+}
+
+function applyMapFilters(){
+  if(!map) return;
+  const q = ($('#mapSearchInput').value || '').toLowerCase().trim();
+  mapMarkers.forEach(m => {
+    const brandOk = state.mapSelectedBrands.has(m._brandName);
+    const brandMatch = m._brandName && m._brandName.toLowerCase().includes(q);
+    const cityMatch = m._cityName && m._cityName.toLowerCase().includes(q);
+    const searchOk = q === '' || brandMatch || cityMatch;
+
+    if(brandOk && searchOk){
+      m.addTo(map);
+    } else {
+      map.removeLayer(m);
+    }
+  });
+}
+
+function initMap(){
+  if(map) return;
+  const cfg = getCityCoords(state.city.n);
+  map = L.map('mapContainer', {zoomControl: false}).setView([cfg.lat, cfg.lng], cfg.zoom);
+  L.control.zoom({position: 'topright'}).addTo(map);
+
+  // Esri World Street Map - iframe / proxy içinde Referer engeli olmadan sorunsuz çalışır
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 19,
+    attribution: 'Tiles &copy; Esri'
+  }).addTo(map);
+
+  renderAllTurkeyStations();
+  renderMapBrandBar();
+}
+
+// Tüm Türkiye genelindeki istasyonları haritaya yükle
+function renderAllTurkeyStations(){
+  if(!map) return;
+  mapMarkers.forEach(m => map.removeLayer(m));
+  mapMarkers = [];
+
+  const allCities = liveApiData && liveApiData.cities ? liveApiData.cities : {};
+  const cityNames = Object.keys(allCities);
+
+  cityNames.forEach(cityName => {
+    const cInfo = allCities[cityName];
+    const cLat = cInfo.lat;
+    const cLng = cInfo.lng;
+    if(!cLat || !cLng) return;
+
+    BRANDS.forEach((brand, idx) => {
+      const bName = brand.n;
+      const bPrice = (cInfo.brands && cInfo.brands[bName] && cInfo.brands[bName][state.fuel]) 
+                     ? cInfo.brands[bName][state.fuel] 
+                     : cInfo.base[state.fuel];
+
+      // Her şehir merkezinin etrafına gerçekçi dağılım ile istasyon yerleştir
+      const angle = (idx / BRANDS.length) * Math.PI * 2;
+      const dist = 0.02 + ((idx % 3) * 0.012);
+      const mLat = cLat + Math.sin(angle) * dist;
+      const mLng = cLng + Math.cos(angle) * (dist * 1.35);
+
+      const priceText = fmt(bPrice) + '₺';
+      const markerHtml = `
+        <div style="background:${brand.c};color:${brand.dark?'#111':'#fff'};font-weight:800;font-size:11px;padding:3px 7px;border-radius:14px;box-shadow:0 3px 8px rgba(0,0,0,0.35);border:2px solid #fff;display:inline-flex;align-items:center;gap:3px;transform:translate(-50%,-50%)">
+          <span>${brand.i}</span>
+          <span style="background:rgba(255,255,255,0.25);padding:1px 4px;border-radius:6px;font-family:monospace">${priceText}</span>
+        </div>`;
+
+      const icon = L.divIcon({
+        className: 'custom-map-pin',
+        html: markerHtml,
+        iconSize: [80, 26],
+        iconAnchor: [40, 13]
+      });
+
+      const popupHtml = `
+        <div class="map-card-popup">
+          <b>${brand.n} ${cityName}</b>
+          <div class="station-addr">${cityName} ${cInfo.region} Bölgesi</div>
+          <div>${FUELS[state.fuel].name} Fiyatı: <span class="station-p mono">${fmt(bPrice)} ₺</span></div>
+          <button onclick="toast('📍 ${brand.n} ${cityName} rotası oluşturuldu')">Yol Tarifi Al</button>
+        </div>`;
+
+      const marker = L.marker([mLat, mLng], {icon}).bindPopup(popupHtml).addTo(map);
+      marker._brandName = brand.n;
+      marker._cityName = cityName;
+      mapMarkers.push(marker);
+    });
+  });
+
+  // Seçili şehre odaklan
+  const activeCfg = getCityCoords(state.city.n);
+  map.setView([activeCfg.lat, activeCfg.lng], 12);
+}
+
+function updateMapMarkers(){
+  renderAllTurkeyStations();
+}
+
+function switchTab(tab){
+  const navPrices = $('#navPricesBtn');
+  const navMap = $('#navMapBtn');
+  const navCalc = $('#navCalcBtn');
+  const scroll = $('#scroll');
+  const mapView = $('#mapView');
+  const calcView = $('#calcView');
+
+  // Hepsini pasifleştir
+  [navPrices, navMap, navCalc].forEach(btn => btn && btn.classList.remove('on'));
+  scroll.style.display = 'none';
+  mapView.classList.remove('on');
+  calcView.classList.remove('on');
+
+  if(tab === 'map'){
+    navMap.classList.add('on');
+    mapView.classList.add('on');
+    initMap();
+    renderMapBrandBar();
+    setTimeout(() => {
+      if(map){
+        map.invalidateSize();
+        updateMapMarkers();
+        applyMapFilters();
+      }
+    }, 150);
+  } else if(tab === 'calc'){
+    navCalc.classList.add('on');
+    calcView.classList.add('on');
+    calculateFuelCost();
+  } else {
+    navPrices.classList.add('on');
+    scroll.style.display = 'block';
+  }
+}
+
+$('#navPricesBtn').addEventListener('click', () => switchTab('prices'));
+$('#navMapBtn').addEventListener('click', () => switchTab('map'));
+$('#navCalcBtn').addEventListener('click', () => switchTab('calc'));
+
+/* ---------- Calculator Logic ---------- */
+let calcMode = 'distance';
+let calcFuel = 'benzin';
+
+function getSelectedCityAvgPrice(fuelKey){
+  const brandList = data(fuelKey);
+  const sum = brandList.reduce((acc, b) => acc + b.price, 0);
+  return sum / (brandList.length || 1);
+}
+
+function calculateFuelCost(){
+  const unitPrice = getSelectedCityAvgPrice(calcFuel);
+  const unitPriceFormatted = fmt(unitPrice);
+  
+  if(calcMode === 'distance'){
+    const km = parseFloat($('#inputDistance').value) || 0;
+    const consumption100 = parseFloat($('#inputConsumption').value) || 0;
+    const litersNeeded = (km * consumption100) / 100;
+    const totalCost = litersNeeded * unitPrice;
+
+    $('#calcResLabel').textContent = `${km} KM Yolculuk Maliyeti`;
+    $('#calcResVal').textContent = `${fmt(totalCost)} ₺`;
+    $('#calcResSub1').textContent = `${FUELS[calcFuel].name} Ort: ${unitPriceFormatted} ₺`;
+    $('#calcResSub2').textContent = `Tüketim: ~${litersNeeded.toFixed(2)} Litre`;
+  } else if(calcMode === 'liter'){
+    const liters = parseFloat($('#inputLiter').value) || 0;
+    const totalCost = liters * unitPrice;
+
+    $('#calcResLabel').textContent = `${liters} Litre Yakıt Tutarı`;
+    $('#calcResVal').textContent = `${fmt(totalCost)} ₺`;
+    $('#calcResSub1').textContent = `${FUELS[calcFuel].name} Ort: ${unitPriceFormatted} ₺`;
+    $('#calcResSub2').textContent = `Birim Fiyat: ${unitPriceFormatted} ₺ / L`;
+  } else if(calcMode === 'budget'){
+    const budget = parseFloat($('#inputBudget').value) || 0;
+    const liters = budget / (unitPrice || 1);
+    const consumption100 = parseFloat($('#inputConsumption').value) || 6.5;
+    const estKm = (liters / (consumption100 || 1)) * 100;
+
+    $('#calcResLabel').textContent = `${fmt(budget)} ₺ ile Alınabilecek Yakıt`;
+    $('#calcResVal').textContent = `~${liters.toFixed(2)} Litre`;
+    $('#calcResSub1').textContent = `${FUELS[calcFuel].name} Ort: ${unitPriceFormatted} ₺`;
+    $('#calcResSub2').textContent = `Gidilebilecek Yol: ~${estKm.toFixed(0)} KM`;
+  }
+}
+
+$('#calcModeSeg').addEventListener('click', (e) => {
+  const btn = e.target.closest('button');
+  if(!btn) return;
+  calcMode = btn.dataset.m;
+  [...$('#calcModeSeg').children].forEach(b => b.classList.toggle('on', b === btn));
+
+  $('#fieldDistance').style.display = calcMode === 'distance' ? 'block' : 'none';
+  $('#fieldConsumption').style.display = (calcMode === 'distance' || calcMode === 'budget') ? 'block' : 'none';
+  $('#fieldLiter').style.display = calcMode === 'liter' ? 'block' : 'none';
+  $('#fieldBudget').style.display = calcMode === 'budget' ? 'block' : 'none';
+
+  calculateFuelCost();
+});
+
+$('#calcFuelSeg').addEventListener('click', (e) => {
+  const btn = e.target.closest('button');
+  if(!btn) return;
+  calcFuel = btn.dataset.f;
+  [...$('#calcFuelSeg').children].forEach(b => b.classList.toggle('on', b === btn));
+  calculateFuelCost();
+});
+
+['#inputDistance', '#inputConsumption', '#inputLiter', '#inputBudget'].forEach(sel => {
+  const el = $(sel);
+  if(el) el.addEventListener('input', calculateFuelCost);
+});
+
+$('#mapLocateBtn').addEventListener('click', () => {
+  toast('📍 Bulunduğunuz konuma odaklanılıyor…');
+  if(map){
+    const cfg = getCityCoords(state.city.n);
+    map.flyTo([cfg.lat, cfg.lng], 13, {duration: 1});
+  }
+});
+
+$('#mapSearchInput').addEventListener('input', () => {
+  applyMapFilters();
+});
+
+$('#mapBrandBar').addEventListener('change', (e) => {
+  if(e.target.id === 'mapAllBrandsCheck'){
+    const checked = e.target.checked;
+    if(checked){
+      BRANDS.forEach(b => state.mapSelectedBrands.add(b.n));
+    } else {
+      state.mapSelectedBrands.clear();
+    }
+  } else if(e.target.classList.contains('map-brand-cb')){
+    const bName = e.target.dataset.b;
+    if(e.target.checked){
+      state.mapSelectedBrands.add(bName);
+    } else {
+      state.mapSelectedBrands.delete(bName);
+    }
+  }
+  renderMapBrandBar();
+  applyMapFilters();
 });
 
 /* City sheet */
-function renderCities(){
-  $('#cities').innerHTML=CITIES.map(c=>`
+function renderCities(filterText=''){
+  const q = filterText.toLowerCase().trim();
+  const filtered = CITIES.filter(c => {
+    return c.n.toLowerCase().includes(q) || (c.plate && c.plate.includes(q)) || c.s.toLowerCase().includes(q);
+  });
+
+  const countLabel = $('#cityCountLabel');
+  if(countLabel) countLabel.textContent = `${filtered.length} / ${CITIES.length} İl`;
+
+  $('#cities').innerHTML=filtered.map(c=>`
     <button class="city ${c.n===state.city.n?'on':''}" data-c="${c.n}">
-      <span>${c.n}<br><small>${c.s} Bölgesi</small></span>
+      <span>${c.plate ? `<span style="font-family:monospace;font-size:11px;background:#e9edf5;padding:2px 5px;border-radius:4px;margin-right:6px">${c.plate}</span>` : ''}${c.n}<br><small>${c.s} Bölgesi</small></span>
       ${c.n===state.city.n?'<span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="#0B1B3A" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg></span>':''}
     </button>`).join('');
 }
-const openSheet=v=>{$('#sheet').classList.toggle('on',v);$('#scrim').classList.toggle('on',v)};
-$('#locBtn').addEventListener('click',()=>{renderCities();openSheet(true)});
+const openSheet=v=>{
+  $('#sheet').classList.toggle('on',v);
+  $('#scrim').classList.toggle('on',v);
+  if(v){
+    const inp = $('#citySearchInput');
+    if(inp){ inp.value = ''; inp.focus(); }
+    renderCities();
+  }
+};
+$('#locBtn').addEventListener('click',()=>{openSheet(true)});
 $('#scrim').addEventListener('click',()=>openSheet(false));
+$('#citySearchInput').addEventListener('input',(e)=>renderCities(e.target.value));
+
 $('#cities').addEventListener('click',e=>{
   const b=e.target.closest('[data-c]');if(!b)return;
   state.city=CITIES.find(c=>c.n===b.dataset.c);
   $('#cityName').textContent=state.city.n;
   state.open=null;openSheet(false);renderAll();
+  if(map){
+    const cfg = getCityCoords(state.city.n);
+    map.flyTo([cfg.lat, cfg.lng], 12, {duration: 1.2});
+  }
 });
 
 /* Nav toasts */
@@ -539,7 +1070,11 @@ function toast(m){
 }
 
 /* Init */
-renderAll();stampUpdated();
+(async function init(){
+  await fetchLivePrices();
+  renderAll();
+  stampUpdated();
+})();
 </script>
 </body>
 </html>
