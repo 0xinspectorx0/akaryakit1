@@ -146,9 +146,14 @@
   .map-view.on{display:flex}
   #mapContainer{flex:1;width:100%;height:100%;background:#dde2ed}
   .map-header{position:absolute;top:14px;left:14px;right:14px;z-index:1000 !important;display:flex;gap:8px;pointer-events:auto}
-  .map-search{flex:1;background:rgba(255,255,255,.98);border-radius:18px;padding:11px 14px;display:flex;align-items:center;gap:10px;box-shadow:0 8px 24px rgba(11,27,58,.22);border:1.5px solid #fff}
+  .map-search{flex:1;position:relative;background:rgba(255,255,255,.98);border-radius:18px;padding:11px 14px;display:flex;align-items:center;gap:10px;box-shadow:0 8px 24px rgba(11,27,58,.22);border:1.5px solid #fff}
   .map-search input{border:0;background:none;outline:0;font-family:inherit;font-size:13.5px;width:100%;color:var(--ink);font-weight:700}
   .map-search svg{width:18px;height:18px;color:var(--navy2);flex-shrink:0}
+  .map-suggestions{position:absolute;top:calc(100% + 6px);left:0;right:0;background:#fff;border-radius:16px;box-shadow:0 12px 30px rgba(11,27,58,.25);border:1px solid var(--line);max-height:220px;overflow-y:auto;display:none;z-index:1001}
+  .map-suggestions.on{display:block}
+  .map-sug-item{padding:10px 14px;font-size:13px;font-weight:600;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);cursor:pointer;color:var(--ink)}
+  .map-sug-item:hover{background:#F4F7FD;color:var(--navy2)}
+  .map-sug-item small{font-size:11px;color:var(--muted);font-weight:500}
   .map-btn{width:44px;height:44px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:0 8px 24px rgba(11,27,58,.22);border:1.5px solid #fff;color:var(--navy2);flex-shrink:0;cursor:pointer}
   .leaflet-top.leaflet-right{top:116px !important;right:14px !important}
   .leaflet-control-zoom{border:0 !important;box-shadow:0 6px 18px rgba(11,27,58,.18) !important;border-radius:14px !important;overflow:hidden}
@@ -350,7 +355,8 @@
       <div class="map-header">
         <div class="map-search">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          <input type="text" id="mapSearchInput" placeholder="İstasyon veya ilçe ara…">
+          <input type="text" id="mapSearchInput" placeholder="Şehir, ilçe veya marka ara…">
+          <div class="map-suggestions" id="mapSuggestions"></div>
         </div>
         <button class="map-btn" id="mapLocateBtn" aria-label="Konumuma git">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
@@ -777,13 +783,58 @@ function renderMapBrandBar(){
   bar.innerHTML = html;
 }
 
+function trLower(s){
+  return (s || '').toLocaleLowerCase('tr-TR');
+}
+
+function handleMapSearch(qRaw){
+  const q = trLower(qRaw).trim();
+  const sugBox = $('#mapSuggestions');
+  
+  if(!q){
+    if(sugBox) { sugBox.classList.remove('on'); sugBox.innerHTML = ''; }
+    applyMapFilters();
+    return;
+  }
+
+  // Eşleşen şehirleri bul
+  const matchedCities = CITIES.filter(c => {
+    return trLower(c.n).includes(q) || (c.plate && c.plate.includes(q));
+  });
+
+  if(sugBox){
+    if(matchedCities.length > 0){
+      sugBox.innerHTML = matchedCities.slice(0, 6).map(c => `
+        <div class="map-sug-item" data-goto="${c.n}">
+          <span>📍 <b>${c.n}</b></span>
+          <small>${c.plate ? c.plate + ' · ' : ''}${c.s} Bölgesi</small>
+        </div>
+      `).join('');
+      sugBox.classList.add('on');
+    } else {
+      sugBox.classList.remove('on');
+      sugBox.innerHTML = '';
+    }
+  }
+
+  // İstasyonları da filtrele
+  applyMapFilters();
+
+  // Eğer doğrudan bir il adı yazıldıysa veya tam/öncelikli eşleştiyse haritayı oraya uçur
+  const exactCity = CITIES.find(c => trLower(c.n) === q || trLower(c.n).startsWith(q));
+  if(exactCity && map){
+    const coords = getCityCoords(exactCity.n);
+    map.flyTo([coords.lat, coords.lng], 12, {duration: 1.2});
+  }
+}
+
 function applyMapFilters(){
   if(!map) return;
-  const q = ($('#mapSearchInput').value || '').toLowerCase().trim();
+  const q = trLower($('#mapSearchInput').value).trim();
   mapMarkers.forEach(m => {
     const brandOk = state.mapSelectedBrands.has(m._brandName);
-    const brandMatch = m._brandName && m._brandName.toLowerCase().includes(q);
-    const cityMatch = m._cityName && m._cityName.toLowerCase().includes(q);
+    const brandMatch = m._brandName && trLower(m._brandName).includes(q);
+    const cityMatch = m._cityName && trLower(m._cityName).includes(q);
     const searchOk = q === '' || brandMatch || cityMatch;
 
     if(brandOk && searchOk){
@@ -995,8 +1046,46 @@ $('#mapLocateBtn').addEventListener('click', () => {
   }
 });
 
-$('#mapSearchInput').addEventListener('input', () => {
-  applyMapFilters();
+$('#mapSearchInput').addEventListener('input', (e) => {
+  handleMapSearch(e.target.value);
+});
+
+$('#mapSearchInput').addEventListener('keydown', (e) => {
+  if(e.key === 'Enter'){
+    e.preventDefault();
+    const q = trLower(e.target.value).trim();
+    const matched = CITIES.find(c => trLower(c.n).includes(q) || (c.plate && c.plate === q));
+    if(matched && map){
+      const coords = getCityCoords(matched.n);
+      map.flyTo([coords.lat, coords.lng], 13, {duration: 1.2});
+      const sugBox = $('#mapSuggestions');
+      if(sugBox) sugBox.classList.remove('on');
+      toast(`📍 ${matched.n} şehrine gidildi`);
+    }
+  }
+});
+
+$('#mapSuggestions').addEventListener('click', (e) => {
+  const item = e.target.closest('[data-goto]');
+  if(!item) return;
+  const cityName = item.dataset.goto;
+  const targetCity = CITIES.find(c => c.n === cityName);
+  if(targetCity && map){
+    const coords = getCityCoords(targetCity.n);
+    map.flyTo([coords.lat, coords.lng], 13, {duration: 1.2});
+    $('#mapSearchInput').value = targetCity.n;
+    $('#mapSuggestions').classList.remove('on');
+    applyMapFilters();
+    toast(`📍 ${targetCity.n} konumuna gidildi`);
+  }
+});
+
+// Arama kutusu dışına tıklandığında önerileri kapat
+document.addEventListener('click', (e) => {
+  if(!e.target.closest('.map-search')){
+    const sugBox = $('#mapSuggestions');
+    if(sugBox) sugBox.classList.remove('on');
+  }
 });
 
 $('#mapBrandBar').addEventListener('change', (e) => {
