@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Akaryakıt Fiyatları – Mobil Uygulama Tasarımı</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0B1B3A; --navy2:#16306B; --accent:#FFC83D; --bg:#F3F5FA; --card:#fff;
+    --ink:#0E1730; --muted:#6B7690; --line:#E7EAF2;
+    --up:#E5484D; --down:#12A150; --benzin:#12A150; --motorin:#F59E0B; --lpg:#2F6BFF;
+    --fuel:var(--benzin);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:var(--ink);
+    background:radial-gradient(1200px 600px at 10% -10%,#dfe7ff 0,transparent 60%),radial-gradient(900px 500px at 100% 110%,#ffe9b8 0,transparent 55%),#EEF1F8;
+    display:flex;align-items:center;justify-content:center;gap:56px;padding:24px;min-height:100vh;
+  }
+  button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+  .mono{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
+
+  /* ---------- Phone ---------- */
+  .phone{
+    width:390px;height:812px;border-radius:48px;background:#000;padding:10px;flex-shrink:0;
+    box-shadow:0 40px 80px -20px rgba(11,27,58,.45),0 0 0 2px #2a2f3d inset;position:relative;
+  }
+  .screen{width:100%;height:100%;border-radius:38px;background:var(--bg);overflow:hidden;position:relative;display:flex;flex-direction:column}
+  .notch{position:absolute;top:10px;left:50%;transform:translateX(-50%);width:110px;height:30px;background:#000;border-radius:20px;z-index:50}
+  .status{height:48px;flex-shrink:0;display:flex;justify-content:space-between;align-items:flex-end;padding:0 28px 6px;font-size:13px;font-weight:700;color:#fff;background:var(--navy);z-index:5}
+  .status svg{height:12px;fill:#fff}
+  .scroll{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;padding-bottom:96px}
+  .scroll::-webkit-scrollbar{display:none}
+
+  /* ---------- Header / Hero ---------- */
+  .hero{background:linear-gradient(160deg,var(--navy) 0%,var(--navy2) 100%);color:#fff;padding:8px 20px 56px;border-radius:0 0 32px 32px;position:relative;overflow:hidden}
+  .hero::before{content:"";position:absolute;right:-60px;top:-60px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(255,200,61,.28),transparent 65%)}
+  .topbar{display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1}
+  .loc{display:flex;align-items:center;gap:8px;padding:8px 12px 8px 10px;border-radius:999px;background:rgba(255,255,255,.12);backdrop-filter:blur(6px);font-weight:600;font-size:14px;color:#fff}
+  .loc svg{width:16px;height:16px}
+  .iconbtn{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.12);display:grid;place-items:center;color:#fff;transition:.2s}
+  .iconbtn:active{transform:scale(.92)}
+  .iconbtn svg{width:20px;height:20px}
+  .spin svg{animation:spin .9s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .live{display:flex;align-items:center;gap:8px;margin-top:18px;font-size:12px;color:rgba(255,255,255,.75);position:relative;z-index:1}
+  .dot{width:8px;height:8px;border-radius:50%;background:#4ADE80;position:relative}
+  .dot::after{content:"";position:absolute;inset:-4px;border-radius:50%;background:#4ADE80;opacity:.4;animation:pulse 1.8s infinite}
+  @keyframes pulse{0%{transform:scale(.6);opacity:.6}100%{transform:scale(1.8);opacity:0}}
+
+  .avg{display:flex;align-items:flex-end;justify-content:space-between;margin-top:6px;position:relative;z-index:1}
+  .avg small{font-size:12px;color:rgba(255,255,255,.7);font-weight:500}
+  .avg .big{font-size:44px;font-weight:800;letter-spacing:-1.5px;line-height:1.05;display:flex;align-items:baseline;gap:4px}
+  .avg .big span{font-size:22px;color:var(--accent);font-weight:700}
+  .chg{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;padding:4px 8px;border-radius:999px;margin-top:6px}
+  .chg.up{background:rgba(229,72,77,.18);color:#FF9A9D}
+  .chg.down{background:rgba(18,161,80,.2);color:#6EE7A0}
+  .chg.flat{background:rgba(255,255,255,.14);color:#dbe3f5}
+  .spark{width:132px;height:56px}
+
+  /* ---------- Floating segmented control ---------- */
+  .seg-wrap{margin:-30px 16px 0;position:relative;z-index:3}
+  .seg{display:grid;grid-template-columns:repeat(3,1fr);background:#fff;border-radius:20px;padding:5px;box-shadow:0 10px 30px -10px rgba(11,27,58,.25);position:relative}
+  .seg .thumb{position:absolute;top:5px;bottom:5px;left:5px;width:calc((100% - 10px)/3);border-radius:15px;background:var(--fuel);transition:transform .3s cubic-bezier(.3,.9,.3,1),background .3s}
+  .seg button{position:relative;z-index:1;padding:11px 0;font-weight:700;font-size:13px;color:var(--muted);border-radius:15px;transition:color .25s;display:flex;flex-direction:column;align-items:center;gap:1px}
+  .seg button em{font-style:normal;font-size:10px;font-weight:500;opacity:.8}
+  .seg button.on{color:#fff}
+
+  /* ---------- Insight cards ---------- */
+  .insights{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 16px 0}
+  .ins{background:var(--card);border-radius:18px;padding:12px 14px;border:1px solid var(--line)}
+  .ins .lbl{font-size:11px;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:6px}
+  .ins .val{font-size:15px;font-weight:800;margin-top:4px}
+  .ins .sub{font-size:11px;color:var(--muted);margin-top:1px}
+
+  /* ---------- List ---------- */
+  .sec-head{display:flex;align-items:center;justify-content:space-between;margin:20px 20px 10px}
+  .sec-head h2{font-size:16px;font-weight:800;letter-spacing:-.2px}
+  .sorts{display:flex;gap:4px;background:#E6EAF3;border-radius:12px;padding:3px}
+  .sorts button{font-size:11px;font-weight:700;padding:6px 10px;border-radius:9px;color:var(--muted)}
+  .sorts button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+  .list{display:flex;flex-direction:column;gap:10px;margin:0 16px}
+  .item{background:var(--card);border-radius:20px;border:1px solid var(--line);overflow:hidden;transition:box-shadow .2s,transform .2s;animation:rise .4s both}
+  @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .item.best{border-color:color-mix(in srgb,var(--fuel) 55%,white);box-shadow:0 8px 22px -12px var(--fuel)}
+  .row{display:flex;align-items:center;gap:12px;padding:12px 14px;width:100%;text-align:left}
+  .logo{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font-weight:800;font-size:15px;color:#fff;flex-shrink:0;letter-spacing:-.5px}
+  .meta{flex:1;min-width:0}
+  .meta b{font-size:15px;font-weight:700;display:flex;align-items:center;gap:6px}
+  .badge{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:#fff;background:var(--fuel);padding:2px 6px;border-radius:6px}
+  .meta span{font-size:12px;color:var(--muted)}
+  .price{text-align:right}
+  .price .p{font-size:18px;font-weight:700}
+  .price .d{font-size:11.5px;font-weight:700;display:inline-flex;align-items:center;gap:2px;margin-top:2px}
+  .d.up{color:var(--up)} .d.down{color:var(--down)} .d.flat{color:var(--muted)}
+  .star{width:32px;height:32px;display:grid;place-items:center;border-radius:50%;color:#C3CAD9;flex-shrink:0;transition:.2s}
+  .star svg{width:20px;height:20px}
+  .star.on{color:var(--accent)}
+  .star.on svg{fill:var(--accent)}
+  .star:active{transform:scale(.8)}
+  .detail{max-height:0;overflow:hidden;transition:max-height .35s ease;background:#F8F9FD}
+  .item.open .detail{max-height:170px}
+  .detail-in{padding:12px 14px 14px;border-top:1px dashed var(--line)}
+  .trio{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .trio div{background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 10px}
+  .trio small{font-size:10.5px;font-weight:700;display:flex;align-items:center;gap:5px;color:var(--muted)}
+  .trio small i{width:7px;height:7px;border-radius:50%;display:inline-block}
+  .trio b{font-size:14px;display:block;margin-top:3px}
+  .actions{display:flex;gap:8px;margin-top:10px}
+  .actions button{flex:1;padding:10px;border-radius:12px;font-size:12.5px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px}
+  .actions svg{width:16px;height:16px}
+  .btn-p{background:var(--navy);color:#fff}
+  .btn-s{background:#fff;border:1px solid var(--line)!important;color:var(--ink)}
+  .chev{width:18px;height:18px;color:#B2BAcc;transition:transform .3s;flex-shrink:0}
+  .item.open .chev{transform:rotate(180deg)}
+
+  /* skeleton */
+  .skel{height:70px;border-radius:20px;background:linear-gradient(90deg,#E8ECF5 25%,#F4F6FB 50%,#E8ECF5 75%);background-size:200% 100%;animation:sh 1.2s infinite}
+  @keyframes sh{to{background-position:-200% 0}}
+
+  .source{margin:18px 20px 0;font-size:11px;color:var(--muted);text-align:center;line-height:1.5}
+
+  /* ---------- Bottom nav ---------- */
+  .nav{position:absolute;left:12px;right:12px;bottom:12px;height:68px;background:rgba(255,255,255,.92);backdrop-filter:blur(14px);border-radius:26px;display:flex;justify-content:space-around;align-items:center;box-shadow:0 12px 30px -8px rgba(11,27,58,.3);border:1px solid rgba(255,255,255,.8);z-index:10}
+  .nav button{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;font-weight:700;color:#98A2B8;padding:6px 10px;border-radius:16px;transition:.2s;position:relative}
+  .nav svg{width:22px;height:22px}
+  .nav button.on{color:var(--navy)}
+  .nav button.on::before{content:"";position:absolute;top:-8px;width:20px;height:4px;border-radius:4px;background:var(--accent)}
+  .nav .badge-n{position:absolute;top:2px;right:6px;width:8px;height:8px;border-radius:50%;background:var(--up);border:2px solid #fff}
+
+  /* ---------- Sheet ---------- */
+  .scrim{position:absolute;inset:0;background:rgba(11,27,58,.5);opacity:0;pointer-events:none;transition:.3s;z-index:30;border-radius:38px}
+  .scrim.on{opacity:1;pointer-events:auto}
+  .sheet{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:28px 28px 38px 38px;padding:10px 18px 24px;transform:translateY(105%);transition:transform .38s cubic-bezier(.3,.9,.3,1);z-index:31;max-height:75%;display:flex;flex-direction:column}
+  .sheet.on{transform:none}
+  .grab{width:40px;height:4px;border-radius:4px;background:#D6DBE8;margin:0 auto 14px}
+  .sheet h3{font-size:17px;font-weight:800;margin-bottom:10px}
+  .cities{overflow-y:auto;scrollbar-width:none}
+  .city{display:flex;justify-content:space-between;align-items:center;width:100%;padding:13px 4px;border-bottom:1px solid var(--line);font-weight:600;font-size:14.5px}
+  .city small{color:var(--muted);font-weight:500;font-size:12px}
+  .city.on{color:var(--navy2)}
+  .city .tick{width:22px;height:22px;border-radius:50%;background:var(--accent);display:grid;place-items:center}
+  .city .tick svg{width:13px;height:13px}
+
+  .toast{position:absolute;left:50%;top:60px;transform:translate(-50%,-30px);background:var(--ink);color:#fff;padding:10px 16px;border-radius:14px;font-size:12.5px;font-weight:600;opacity:0;transition:.35s;z-index:60;white-space:nowrap;display:flex;gap:8px;align-items:center;box-shadow:0 10px 25px rgba(0,0,0,.3)}
+  .toast.on{opacity:1;transform:translate(-50%,0)}
+
+  /* ---------- Design notes panel ---------- */
+  .notes{max-width:440px;width:100%}
+  .notes .tag{display:inline-block;font-size:12px;font-weight:700;color:var(--navy2);background:#fff;border:1px solid var(--line);padding:6px 12px;border-radius:999px}
+  .notes h1{font-size:34px;line-height:1.12;letter-spacing:-1px;margin:14px 0 10px;font-weight:800}
+  .notes h1 span{background:linear-gradient(transparent 62%,var(--accent) 62%)}
+  .notes>p{color:var(--muted);font-size:14.5px;line-height:1.6}
+  .cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:22px}
+  .nc{background:rgba(255,255,255,.75);backdrop-filter:blur(8px);border:1px solid #fff;border-radius:20px;padding:16px;box-shadow:0 10px 30px -18px rgba(11,27,58,.35)}
+  .nc h4{font-size:13px;font-weight:800;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+  .nc p,.nc li{font-size:12.5px;color:#4a5570;line-height:1.55}
+  .nc ul{list-style:none;display:flex;flex-direction:column;gap:4px}
+  .nc.wide{grid-column:span 2}
+  .sw{display:flex;gap:6px;margin-top:4px}
+  .sw i{flex:1;height:34px;border-radius:10px;display:block;position:relative}
+  .sw i b{position:absolute;bottom:-16px;left:0;font-size:9px;font-weight:600;color:var(--muted);font-style:normal;white-space:nowrap}
+  .sw-wrap{padding-bottom:16px}
+
+  @media (max-width:1020px){ .notes{display:none} }
+  @media (max-width:480px){
+    body{padding:0;display:block;background:var(--bg)}
+    .phone{width:100%;height:100dvh;border-radius:0;padding:0;box-shadow:none;background:none}
+    .screen{border-radius:0}
+    .notch{display:none}
+    .status{display:none}
+    .hero{padding-top:calc(env(safe-area-inset-top) + 14px)}
+    .scrim{border-radius:0}
+    .sheet{border-radius:28px 28px 0 0}
+    .toast{top:20px}
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ Design notes (desktop) ============ -->
+<aside class="notes">
+  <span class="tag">⛽ Tasarım Önerisi · v1.0</span>
+  <h1>Akaryakıt fiyatları, <span>tek bakışta</span> anlaşılır.</h1>
+  <p>Kullanıcı uygulamayı çoğunlukla hızlıca "en ucuz nerede?" sorusu için açar. Bu yüzden ortalama fiyat, en ucuz istasyon ve değişim bilgisi ilk ekranda, tek elle kullanılabilir alanda yer alır.</p>
+  <div class="cards">
+    <div class="nc wide">
+      <h4>🎨 Renk sistemi</h4>
+      <div class="sw-wrap"><div class="sw">
+        <i style="background:#0B1B3A"><b>Lacivert · Güven</b></i>
+        <i style="background:#FFC83D"><b>Sarı · Vurgu</b></i>
+        <i style="background:#12A150"><b>Benzin</b></i>
+        <i style="background:#F59E0B"><b>Motorin</b></i>
+        <i style="background:#2F6BFF"><b>LPG</b></i>
+      </div></div>
+    </div>
+    <div class="nc">
+      <h4>🧭 Bilgi hiyerarşisi</h4>
+      <ul><li>1. Konum + güncelleme zamanı</li><li>2. Ortalama fiyat + trend</li><li>3. Yakıt türü seçimi</li><li>4. Sıralı marka listesi</li></ul>
+    </div>
+    <div class="nc">
+      <h4>🔤 Tipografi</h4>
+      <p><b>Plus Jakarta Sans</b> başlıklar için, fiyatlarda <b class="mono">JetBrains Mono</b> ile sabit genişlikli rakamlar; güncellenirken zıplama olmaz.</p>
+    </div>
+    <div class="nc">
+      <h4>🔄 Durumlar</h4>
+      <ul><li>• Yükleniyor: skeleton</li><li>• Canlı: nabız noktası</li><li>• Çevrimdışı: son kayıt etiketi</li><li>• Hata: yeniden dene</li></ul>
+    </div>
+    <div class="nc">
+      <h4>♿ Erişilebilirlik</h4>
+      <p>Artış/azalış yalnızca renkle değil, ok ve işaretle de gösterilir. Dokunma alanları en az 40px.</p>
+    </div>
+    <div class="nc wide">
+      <h4>✨ Ek özellik önerileri</h4>
+      <p>Fiyat alarmı, yakınımdaki istasyonlar haritası, yakıt maliyet hesaplayıcı, widget & bildirim ile günlük zam/indirim özeti, favori istasyonlar.</p>
+    </div>
+  </div>
+</aside>
+
+<!-- ============ Phone ============ -->
+<main class="phone">
+  <div class="screen" id="screen">
+    <div class="notch"></div>
+    <div class="status">
+      <span>9:41</span>
+      <span style="display:flex;gap:6px;align-items:center">
+        <svg viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5" width="3" height="7" rx="1"/><rect x="10" y="2" width="3" height="10" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>
+        <svg viewBox="0 0 26 12"><rect x="0" y="1" width="22" height="10" rx="3" fill="none" stroke="#fff" stroke-width="1"/><rect x="2" y="3" width="16" height="6" rx="1.5"/><rect x="23" y="4" width="2" height="4" rx="1"/></svg>
+      </span>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <div class="scroll" id="scroll">
+      <!-- Hero -->
+      <section class="hero">
+        <div class="topbar">
+          <button class="loc" id="locBtn" aria-label="Şehir seç">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>
+            <span id="cityName">İstanbul (Avr.)</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <button class="iconbtn" id="refreshBtn" aria-label="Fiyatları yenile">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>
+          </button>
+        </div>
+
+        <div class="live"><span class="dot"></span><span id="updated">Canlı · Az önce güncellendi</span></div>
+
+        <div class="avg">
+          <div>
+            <small id="avgLabel">Ortalama Kurşunsuz 95</small>
+            <div class="big mono" id="avgPrice">0,00<span>₺</span></div>
+            <div id="avgChg"></div>
+          </div>
+          <svg class="spark" id="spark" viewBox="0 0 132 56" fill="none"></svg>
+        </div>
+      </section>
+
+      <!-- Fuel segmented -->
+      <div class="seg-wrap">
+        <div class="seg" id="seg" role="tablist">
+          <div class="thumb" id="thumb"></div>
+          <button class="on" data-f="benzin" role="tab">Benzin<em>95 Oktan</em></button>
+          <button data-f="motorin" role="tab">Motorin<em>Eurodiesel</em></button>
+          <button data-f="lpg" role="tab">LPG<em>Otogaz</em></button>
+        </div>
+      </div>
+
+      <!-- Insights -->
+      <div class="insights" id="insights"></div>
+
+      <!-- List -->
+      <div class="sec-head">
+        <h2>İstasyonlar</h2>
+        <div class="sorts" id="sorts">
+          <button class="on" data-s="price">Fiyat</button>
+          <button data-s="change">Değişim</button>
+          <button data-s="name">A–Z</button>
+        </div>
+      </div>
+      <div class="list" id="list"></div>
+      <p class="source">Fiyatlar EPDK verileri ve dağıtıcı şirket duyurularından derlenmiştir. Örnek veridir; istasyon fiyatları farklılık gösterebilir.</p>
+    </div>
+
+    <!-- Bottom nav -->
+    <nav class="nav">
+      <button class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16"/><path d="M3 21h14"/><path d="M15 9h2a2 2 0 0 1 2 2v5a1.5 1.5 0 0 0 3 0V8l-3-3"/><path d="M8 8h4"/></svg>Fiyatlar</button>
+      <button data-msg="Harita yakında"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></svg>Harita</button>
+      <button data-msg="Hesaplayıcı yakında"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2.5" width="14" height="19" rx="3"/><path d="M8.5 7h7M9 12h.01M12 12h.01M15 12h.01M9 16h.01M12 16h.01M15 16h.01"/></svg>Hesapla</button>
+      <button data-msg="Alarmlar yakında" style="position:relative"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg>Alarm<span class="badge-n" id="alarmDot" style="display:none"></span></button>
+    </nav>
+
+    <!-- City sheet -->
+    <div class="scrim" id="scrim"></div>
+    <div class="sheet" id="sheet" role="dialog" aria-label="Şehir seçimi">
+      <div class="grab"></div>
+      <h3>Konum seç</h3>
+      <div class="cities" id="cities"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+const FUELS = {
+  benzin:{name:'Benzin',label:'Kurşunsuz 95',base:47.60,color:'#12A150',mult:1},
+  motorin:{name:'Motorin',label:'Eurodiesel',base:48.35,color:'#F59E0B',mult:1},
+  lpg:{name:'LPG',label:'Otogaz',base:25.10,color:'#2F6BFF',mult:.5}
+};
+const CITIES = [
+  {n:'İstanbul (Avr.)',s:'Marmara',o:0},
+  {n:'İstanbul (Anad.)',s:'Marmara',o:-.06},
+  {n:'Ankara',s:'İç Anadolu',o:-.22},
+  {n:'İzmir',s:'Ege',o:.12},
+  {n:'Bursa',s:'Marmara',o:-.10},
+  {n:'Antalya',s:'Akdeniz',o:.35},
+  {n:'Trabzon',s:'Karadeniz',o:.55}
+];
+const BRANDS = [
+  {n:'Opet',c:'#0057B8',i:'OP',o:.00},
+  {n:'Shell',c:'#F5C400',i:'SH',o:.18,dark:true},
+  {n:'Petrol Ofisi',c:'#E30613',i:'PO',o:.12},
+  {n:'BP',c:'#00963F',i:'BP',o:.22},
+  {n:'Total',c:'#ED1C24',i:'TT',o:.26},
+  {n:'Aytemiz',c:'#F26B21',i:'AY',o:-.14},
+  {n:'Alpet',c:'#6B2FB3',i:'AL',o:-.20},
+  {n:'TP',c:'#0E7C86',i:'TP',o:-.08}
+];
+const state={city:CITIES[0],fuel:'benzin',sort:'price',favs:new Set(['Opet','Aytemiz']),open:null,tick:0};
+
+function hash(s){let h=2166136261;for(const c of s){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const fmt=n=>n.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+function priceOf(b,fuel,city=state.city){
+  const f=FUELS[fuel];
+  const r=rng(hash(b.n+fuel+state.tick))();
+  const jitter=(r-.5)*.08;
+  return +(f.base+(city.o+b.o)*f.mult+jitter*f.mult).toFixed(2);
+}
+function deltaOf(b,fuel){
+  const r=rng(hash(b.n+fuel+city_key()+state.tick*3))();
+  const arr=[-.65,-.4,-.2,0,0,.15,.35,.9];
+  const f=FUELS[fuel];
+  return +(arr[Math.floor(r*arr.length)]*f.mult).toFixed(2);
+}
+function city_key(){return state.city.n}
+function data(fuel=state.fuel){
+  return BRANDS.map(b=>({...b,price:priceOf(b,fuel),delta:deltaOf(b,fuel)}));
+}
+
+const arrowUp='<svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4 3 18h18z"/></svg>';
+const arrowDn='<svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 20 21 6H3z"/></svg>';
+const dirOf=d=>d>0?'up':d<0?'down':'flat';
+const deltaHTML=(d,cls='')=>{
+  const k=dirOf(d);
+  return `<span class="d ${k} ${cls}">${k==='up'?arrowUp:k==='down'?arrowDn:'–'} ${k==='flat'?'Sabit':(d>0?'+':'−')+fmt(Math.abs(d))}</span>`;
+};
+
+/* ---------- Render ---------- */
+const $=s=>document.querySelector(s);
+function setFuelColor(){document.documentElement.style.setProperty('--fuel',FUELS[state.fuel].color)}
+
+function renderHero(){
+  const d=data();
+  const avg=d.reduce((a,b)=>a+b.price,0)/d.length;
+  const avgD=d.reduce((a,b)=>a+b.delta,0)/d.length;
+  $('#avgLabel').textContent='Ortalama '+FUELS[state.fuel].label;
+  $('#avgPrice').innerHTML=fmt(avg)+'<span>₺</span>';
+  const k=dirOf(+avgD.toFixed(2));
+  $('#avgChg').innerHTML=`<span class="chg ${k}">${k==='up'?arrowUp:k==='down'?arrowDn:'–'} ${k==='flat'?'Değişim yok':(avgD>0?'+':'−')+fmt(Math.abs(avgD))+' ₺ bugün'}</span>`;
+  // sparkline
+  const rnd=rng(hash(state.city.n+state.fuel));
+  const pts=[avg];
+  for(let i=0;i<6;i++){pts.unshift(pts[0]-(avgD*(i===0?1:.4))+(rnd()-.5)*.5*FUELS[state.fuel].mult)}
+  const mn=Math.min(...pts),mx=Math.max(...pts),rg=(mx-mn)||1;
+  const xy=pts.map((p,i)=>[6+i*(120/6),48-((p-mn)/rg)*38]);
+  const path=xy.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+  const last=xy[xy.length-1];
+  $('#spark').innerHTML=`
+    <defs><linearGradient id="g" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#FFC83D" stop-opacity=".35"/><stop offset="1" stop-color="#FFC83D" stop-opacity="0"/></linearGradient></defs>
+    <path d="${path} L126 56 L6 56 Z" fill="url(#g)"/>
+    <path d="${path}" stroke="#FFC83D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="${last[0]}" cy="${last[1]}" r="4.5" fill="#0B1B3A" stroke="#FFC83D" stroke-width="2.4"/>`;
+}
+
+function renderInsights(){
+  const d=data().sort((a,b)=>a.price-b.price);
+  const best=d[0],worst=d[d.length-1];
+  const diff=worst.price-best.price;
+  const litre=50*diff;
+  $('#insights').innerHTML=`
+    <div class="ins">
+      <div class="lbl"><span style="color:var(--down)">●</span> En ucuz</div>
+      <div class="val">${best.n} · <span class="mono">${fmt(best.price)}₺</span></div>
+      <div class="sub">En pahalıya göre ${fmt(diff)} ₺ avantaj</div>
+    </div>
+    <div class="ins">
+      <div class="lbl"><span style="color:var(--accent)">●</span> 50 L depoda tasarruf</div>
+      <div class="val mono">${fmt(litre)} ₺</div>
+      <div class="sub">${best.n} ile ${worst.n} arası</div>
+    </div>`;
+}
+
+function renderList(animate=true){
+  let d=data();
+  const minP=Math.min(...d.map(x=>x.price));
+  if(state.sort==='price')d.sort((a,b)=>a.price-b.price);
+  if(state.sort==='change')d.sort((a,b)=>a.delta-b.delta);
+  if(state.sort==='name')d.sort((a,b)=>a.n.localeCompare(b.n,'tr'));
+  // favourites first within sort? keep pure sort, but show star
+  $('#list').innerHTML=d.map((b,i)=>{
+    const isBest=b.price===minP;
+    const open=state.open===b.n;
+    const others=Object.keys(FUELS).map(k=>{
+      const p=priceOf(b,k);
+      return `<div><small><i style="background:${FUELS[k].color}"></i>${FUELS[k].name}</small><b class="mono">${fmt(p)}₺</b></div>`;
+    }).join('');
+    return `
+    <article class="item ${isBest?'best':''} ${open?'open':''}" style="animation-delay:${animate?i*45:0}ms" data-n="${b.n}">
+      <div class="row" role="button" tabindex="0" aria-expanded="${open}">
+        <div class="logo" style="background:${b.c};${b.dark?'color:#1b1b1b':''}">${b.i}</div>
+        <div class="meta">
+          <b>${b.n} ${isBest?'<span class="badge">En ucuz</span>':''}</b>
+          <span>${(.4+rng(hash(b.n+state.city.n))()*7).toFixed(1)} km · ${state.city.n.split(' ')[0]}</span>
+        </div>
+        <div class="price">
+          <div class="p mono">${fmt(b.price)}<span style="font-size:12px;color:var(--muted)"> ₺</span></div>
+          ${deltaHTML(b.delta)}
+        </div>
+        <button class="star ${state.favs.has(b.n)?'on':''}" data-fav="${b.n}" aria-label="Favori">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></svg>
+        </button>
+      </div>
+      <div class="detail"><div class="detail-in">
+        <div class="trio">${others}</div>
+        <div class="actions">
+          <button class="btn-p" data-act="route"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-8-8 18-2-8z"/></svg>Yol tarifi</button>
+          <button class="btn-s" data-act="alarm" data-b="${b.n}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg>Fiyat alarmı</button>
+        </div>
+      </div></div>
+    </article>`;
+  }).join('');
+}
+
+function renderAll(animate=true){setFuelColor();renderHero();renderInsights();renderList(animate)}
+
+/* ---------- Events ---------- */
+$('#seg').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  state.fuel=b.dataset.f;
+  [...$('#seg').querySelectorAll('button')].forEach((x,i)=>{x.classList.toggle('on',x===b);if(x===b)$('#thumb').style.transform=`translateX(${i*100}%)`});
+  state.open=null;renderAll();
+});
+$('#sorts').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  state.sort=b.dataset.s;
+  [...$('#sorts').children].forEach(x=>x.classList.toggle('on',x===b));
+  renderList();
+});
+$('#list').addEventListener('click',e=>{
+  const fav=e.target.closest('[data-fav]');
+  if(fav){
+    e.stopPropagation();
+    const n=fav.dataset.fav;
+    state.favs.has(n)?state.favs.delete(n):state.favs.add(n);
+    fav.classList.toggle('on');
+    toast(state.favs.has(n)?`⭐ ${n} favorilere eklendi`:`${n} favorilerden çıkarıldı`);
+    return;
+  }
+  const act=e.target.closest('[data-act]');
+  if(act){
+    if(act.dataset.act==='alarm'){toast('🔔 '+act.dataset.b+' için alarm kuruldu');$('#alarmDot').style.display='block'}
+    else toast('📍 Harita uygulaması açılıyor…');
+    return;
+  }
+  const item=e.target.closest('.item');
+  if(item){
+    const n=item.dataset.n;
+    state.open=state.open===n?null:n;
+    document.querySelectorAll('.item').forEach(x=>{
+      const o=x.dataset.n===state.open;
+      x.classList.toggle('open',o);
+      x.querySelector('.row').setAttribute('aria-expanded',o);
+    });
+  }
+});
+$('#list').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('row')){e.preventDefault();e.target.click()}});
+
+/* Refresh */
+let secs=0,timer;
+function stampUpdated(){
+  clearInterval(timer);secs=0;
+  const el=$('#updated');
+  el.textContent='Canlı · Az önce güncellendi';
+  timer=setInterval(()=>{secs++;el.textContent='Canlı · '+(secs<60?secs+' sn önce':Math.floor(secs/60)+' dk önce')+' güncellendi'},1000);
+}
+$('#refreshBtn').addEventListener('click',()=>{
+  const btn=$('#refreshBtn');if(btn.classList.contains('spin'))return;
+  btn.classList.add('spin');
+  $('#list').innerHTML='<div class="skel"></div>'.repeat(5).replace(/<div class="skel"><\/div>/g,'<div class="skel"></div>');
+  $('#updated').textContent='Güncelleniyor…';
+  setTimeout(()=>{
+    state.tick++;btn.classList.remove('spin');renderAll();stampUpdated();toast('✅ Fiyatlar güncellendi');
+  },1200);
+});
+
+/* City sheet */
+function renderCities(){
+  $('#cities').innerHTML=CITIES.map(c=>`
+    <button class="city ${c.n===state.city.n?'on':''}" data-c="${c.n}">
+      <span>${c.n}<br><small>${c.s} Bölgesi</small></span>
+      ${c.n===state.city.n?'<span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="#0B1B3A" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg></span>':''}
+    </button>`).join('');
+}
+const openSheet=v=>{$('#sheet').classList.toggle('on',v);$('#scrim').classList.toggle('on',v)};
+$('#locBtn').addEventListener('click',()=>{renderCities();openSheet(true)});
+$('#scrim').addEventListener('click',()=>openSheet(false));
+$('#cities').addEventListener('click',e=>{
+  const b=e.target.closest('[data-c]');if(!b)return;
+  state.city=CITIES.find(c=>c.n===b.dataset.c);
+  $('#cityName').textContent=state.city.n;
+  state.open=null;openSheet(false);renderAll();
+});
+
+/* Nav toasts */
+document.querySelectorAll('.nav [data-msg]').forEach(b=>b.addEventListener('click',()=>toast(b.dataset.msg)));
+
+/* Toast */
+let tt;
+function toast(m){
+  const t=$('#toast');t.textContent=m;t.classList.add('on');
+  clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),2000);
+}
+
+/* Init */
+renderAll();stampUpdated();
+</script>
+</body>
+</html>
