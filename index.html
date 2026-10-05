@@ -817,15 +817,8 @@ function handleMapSearch(qRaw){
     }
   }
 
-  // İstasyonları da filtrele
+  // İstasyonları filtrele
   applyMapFilters();
-
-  // Eğer doğrudan bir il adı yazıldıysa veya tam/öncelikli eşleştiyse haritayı oraya uçur
-  const exactCity = CITIES.find(c => trLower(c.n) === q || trLower(c.n).startsWith(q));
-  if(exactCity && map){
-    const coords = getCityCoords(exactCity.n);
-    map.flyTo([coords.lat, coords.lng], 12, {duration: 1.2});
-  }
 }
 
 function applyMapFilters(){
@@ -857,12 +850,12 @@ function initMap(){
     attribution: 'Tiles &copy; Esri'
   }).addTo(map);
 
-  renderAllTurkeyStations();
+  renderAllTurkeyStations(true);
   renderMapBrandBar();
 }
 
 // Tüm Türkiye genelindeki istasyonları haritaya yükle
-function renderAllTurkeyStations(){
+function renderAllTurkeyStations(centerOnCity = false){
   if(!map) return;
   mapMarkers.forEach(m => map.removeLayer(m));
   mapMarkers = [];
@@ -917,13 +910,15 @@ function renderAllTurkeyStations(){
     });
   });
 
-  // Seçili şehre odaklan
-  const activeCfg = getCityCoords(state.city.n);
-  map.setView([activeCfg.lat, activeCfg.lng], 12);
+  // Yalnızca ilk yüklemede veya şehir açıkça değiştirildiğinde konumu sıfırla
+  if(centerOnCity){
+    const activeCfg = getCityCoords(state.city.n);
+    map.setView([activeCfg.lat, activeCfg.lng], 12);
+  }
 }
 
 function updateMapMarkers(){
-  renderAllTurkeyStations();
+  renderAllTurkeyStations(false);
 }
 
 function switchTab(tab){
